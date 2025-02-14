@@ -21,7 +21,7 @@ def get_page_content(url: str, agents: list[str]) -> str | None:
 
 def extract_recipe(html_content: str) -> tuple[list[str], str]:
     if not html_content:
-        return []
+        return [], []
 
     try:
         soup = BeautifulSoup(html_content, "html.parser")
