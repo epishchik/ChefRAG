@@ -3,17 +3,12 @@ import json
 import random
 import time
 from argparse import ArgumentParser, Namespace
+from parser.utils import sleep_random
 from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
 from tqdm.auto import tqdm
-
-
-def sleep_random(around: float, std: float) -> float:
-    sleep_duration = random.normalvariate(around, std)
-    sleep_duration = max(1.5, sleep_duration)
-    return sleep_duration
 
 
 def get_page_content(fid: int, page: int, agents: list[str]) -> str | None:
