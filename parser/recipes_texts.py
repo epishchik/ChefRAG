@@ -1,19 +1,30 @@
 import csv
 import json
+import os
 import random
-import time
 from argparse import ArgumentParser, Namespace
-from parser.utils import sleep_random
 from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from tqdm.auto import tqdm
+
+load_dotenv()
 
 
 def get_page_content(url: str, agents: list[str]) -> str | None:
     headers = {"User-Agent": random.choice(agents)}
-    response = requests.get(url, headers=headers)
+
+    response = requests.get(
+        url="https://proxy.scrapeops.io/v1/",
+        params={
+            "api_key": os.getenv("SCRAPEOPS_API_KEY"),
+            "url": url,
+        },
+        headers=headers,
+    )
+
     if response.status_code == 200:
         return response.text
     return None
@@ -56,8 +67,8 @@ def parse_args() -> Namespace:
         "--recipes-texts-filename", type=str, default="data/recipes_texts.csv"
     )
     parser.add_argument("--agents", type=str, default="data/agents.json")
-    parser.add_argument("--sleep", type=float, default=2.5)
-    parser.add_argument("--sleep-std", type=float, default=0.8)
+    parser.add_argument("--total", type=int, default=-1)
+    parser.add_argument("--skip-first-n", type=int, default=-1)
 
     return parser.parse_args()
 
@@ -68,26 +79,39 @@ def main():
     read_filename = Path(args.recipes_pages_filename)
     write_filename = Path(args.recipes_texts_filename)
 
+    write_file_exist = write_filename.is_file()
+    write_filename.parent.mkdir(parents=True, exist_ok=True)
+
     with open(args.agents) as f:
         agents = json.load(f)
 
     read_csv_file = open(read_filename)
-    write_csv_file = open(write_filename, "w+")
+
+    if not write_file_exist:
+        write_csv_file = open(write_filename, "w")
+        csv_writer = csv.writer(write_csv_file)
+        csv_writer.writerow(["link", "ingredients", "recipe"])
+    else:
+        write_csv_file = open(write_filename, "a")
+        csv_writer = csv.writer(write_csv_file)
 
     csv_reader = csv.reader(read_csv_file)
     next(csv_reader, None)
 
-    csv_writer = csv.writer(write_csv_file)
-    csv_writer.writerow(["link", "ingredients", "recipe"])
+    if args.skip_first_n != -1:
+        for _ in tqdm(range(args.skip_first_n), desc="skipping"):
+            next(csv_reader, None)
 
+    total = 0
     for _, url in tqdm(csv_reader):
         recipe_content = get_page_content(url=url, agents=agents)
         ingredients, recipe = extract_recipe(recipe_content)
 
         csv_writer.writerow([url, ingredients, recipe])
+        total += 1
 
-        sleep_duration = sleep_random(args.sleep, args.sleep_std)
-        time.sleep(sleep_duration)
+        if args.total != -1 and total >= args.total:
+            break
 
     read_csv_file.close()
     write_csv_file.close()
