@@ -23,6 +23,7 @@ def get_page_content(url: str, agents: list[str]) -> str | None:
             "url": url,
         },
         headers=headers,
+        timeout=120,
     )
 
     if response.status_code == 200:
@@ -98,7 +99,7 @@ def parse_args() -> Namespace:
     parser = ArgumentParser()
 
     parser.add_argument(
-        "--recipes-pages-filename", type=str, default="data/recipes_pages.csv"
+        "--recipes-pages-filename", type=str, default="data/recipes_pages_clean.csv"
     )
     parser.add_argument(
         "--recipes-texts-filename", type=str, default="data/recipes_texts.csv"

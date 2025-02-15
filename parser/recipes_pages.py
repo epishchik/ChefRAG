@@ -24,6 +24,7 @@ def get_page_content(fid: int, page: int, agents: list[str]) -> str | None:
             "url": url,
         },
         headers=headers,
+        timeout=120,
     )
 
     if response.status_code == 200:
@@ -43,6 +44,8 @@ def extract_recipes(html_content: str) -> list[list[str]] | None:
 
     try:
         recipe_containers = soup.find_all("div", {"class": "in_seen"})
+        if len(recipe_containers) < 1:
+            return None
         for container in recipe_containers:
             link = "https://www.russianfood.com" + container.find("a")["href"]
             title = container.find("h3").text.lower().strip()
@@ -60,7 +63,8 @@ def get_max_pages_per_fid(
 ) -> int:
     for page in tqdm(range(1, high + 1)):
         response = get_page_content(fid=fid, page=page, agents=agents)
-        if response is None:
+        outputs = extract_recipes(response)
+        if outputs is None:
             return page
     return page
 
@@ -68,7 +72,8 @@ def get_max_pages_per_fid(
 def get_max_fid(agents: list[str], high: int = 10) -> int:
     for fid in tqdm(range(1, high + 1)):
         response = get_page_content(fid=fid, page=1, agents=agents)
-        if response is None:
+        outputs = extract_recipes(response)
+        if outputs is None:
             return fid
     return fid
 
@@ -84,6 +89,8 @@ def parse_args() -> Namespace:
     parser.add_argument("--high-page", type=int, default=50)
     parser.add_argument("--max-page", type=int, default=50)
     parser.add_argument("--start-page", type=int, default=1)
+    parser.add_argument("--save-fid", type=str, default=None)
+    parser.add_argument("--fid-file", type=str, default=None)
 
     return parser.parse_args()
 
@@ -94,6 +101,19 @@ def main():
     filename = Path(args.filename)
     file_exist = filename.is_file()
     filename.parent.mkdir(parents=True, exist_ok=True)
+
+    if args.save_fid is not None:
+        save_fid_filename = Path(args.save_fid)
+        save_fid_file_exist = save_fid_filename.is_file()
+        save_fid_filename.parent.mkdir(parents=True, exist_ok=True)
+
+        if not save_fid_file_exist:
+            save_fid_csv_file = open(save_fid_filename, "w")
+            save_fid_csv_writer = csv.writer(save_fid_csv_file)
+            save_fid_csv_writer.writerow(["fid"])
+        else:
+            save_fid_csv_file = open(save_fid_filename, "a")
+            save_fid_csv_writer = csv.writer(save_fid_csv_file)
 
     with open(args.agents) as f:
         agents = json.load(f)
@@ -112,7 +132,22 @@ def main():
         else args.max_fid
     )
 
-    for fid in tqdm(range(args.start_fid, max_fid)):
+    if args.fid_file is None:
+        pbar = tqdm(range(args.start_fid, max_fid))
+    else:
+        fid_csv_file = open(args.fid_file)
+        fid_csv_reader = csv.reader(fid_csv_file)
+        next(fid_csv_reader, None)
+
+        fids = []
+        for row in fid_csv_reader:
+            fids.append(row[0])
+        fids = sorted(list(set(fids)))
+
+        pbar = tqdm(fids, total=len(fids))
+        fid_csv_file.close()
+
+    for fid in pbar:
         max_page = (
             get_max_pages_per_fid(agents=agents, fid=fid, high=args.high_page)
             if args.max_page == -1
@@ -124,8 +159,12 @@ def main():
             outputs = extract_recipes(page_content)
             if outputs is not None:
                 csv_writer.writerows(outputs)
+                if args.save_fid is not None:
+                    save_fid_csv_writer.writerow([fid])
 
     csv_file.close()
+    if args.save_fid is not None:
+        save_fid_csv_file.close()
 
 
 if __name__ == "__main__":

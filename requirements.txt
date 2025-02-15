@@ -2,3 +2,5 @@ tqdm
 beautifulsoup4
 requests
 pre-commit
+pandas
+python-dotenv
