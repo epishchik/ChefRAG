@@ -30,31 +30,68 @@ def get_page_content(url: str, agents: list[str]) -> str | None:
     return None
 
 
-def extract_recipe(html_content: str) -> tuple[list[str], str]:
+def extract_recipe(html_content: str) -> tuple[str, str, str, list[str], list[str]]:
     if not html_content:
-        return [], []
+        return None, None, None, [], []
 
     try:
         soup = BeautifulSoup(html_content, "html.parser")
     except:  # noqa: E722
-        return [], []
+        return None, None, None, [], []
 
     try:
         ingredient_containers = soup.find("table", {"class": "ingr"})
         ingredient_spans = ingredient_containers.select("tr:not(:first-child) span")
-        ingredients = [span.text.lower().strip() for span in ingredient_spans[2:]]
+        ingredients = [span.text.lower().strip() for span in ingredient_spans]
+
+        if ingredients[0] == "продукты":
+            ingredients = ingredients[1:]
+
+        if "на" in ingredients[0] and (
+            "порций" in ingredients[0]
+            or "порцию" in ingredients[0]
+            or "порции" in ingredients[0]
+        ):
+            ingredients = ingredients[1:]
     except:  # noqa: E722
         ingredients = []
 
     try:
         recipe_containers = soup.find_all("div", {"class": "step_n"})
+        if len(recipe_containers) < 1:
+            raise
         steps = []
         for container in recipe_containers:
             steps.append(container.find("p").text.lower().strip())
     except:  # noqa: E722
-        steps = []
+        try:
+            recipe_container = soup.find("div", {"id": "how"})
+            recipe_text = recipe_container.get_text(separator="\n", strip=True)
+            steps = [t.lower().strip() for t in recipe_text.split("\n")]
+        except:  # noqa: E722
+            steps = []
 
-    return ingredients, steps
+    try:
+        metadata = soup.find("div", {"class": "ya-share2 share_block"})
+    except:  # noqa: E722
+        return None, None, None, ingredients, steps
+
+    try:
+        image_url = metadata["data-image"]
+    except:  # noqa: E722
+        image_url = None
+
+    try:
+        title = metadata["data-title"].lower().strip()
+    except:  # noqa: E722
+        title = None
+
+    try:
+        description = metadata["data-description"].lower().strip()
+    except:  # noqa: E722
+        description = None
+
+    return image_url, title, description, ingredients, steps
 
 
 def parse_args() -> Namespace:
@@ -90,7 +127,9 @@ def main():
     if not write_file_exist:
         write_csv_file = open(write_filename, "w")
         csv_writer = csv.writer(write_csv_file)
-        csv_writer.writerow(["link", "ingredients", "recipe"])
+        csv_writer.writerow(
+            ["link", "image_link", "title", "description", "ingredients", "recipe"]
+        )
     else:
         write_csv_file = open(write_filename, "a")
         csv_writer = csv.writer(write_csv_file)
@@ -105,9 +144,12 @@ def main():
     total = 0
     for _, url in tqdm(csv_reader):
         recipe_content = get_page_content(url=url, agents=agents)
-        ingredients, recipe = extract_recipe(recipe_content)
 
-        csv_writer.writerow([url, ingredients, recipe])
+        image_url, title, description, ingredients, recipe = extract_recipe(
+            recipe_content
+        )
+
+        csv_writer.writerow([url, image_url, title, description, ingredients, recipe])
         total += 1
 
         if args.total != -1 and total >= args.total:
