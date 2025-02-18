@@ -92,10 +92,6 @@ docker run -d \
   qdrant/qdrant:v1.13.3
 ```
 
-Step 3. Upload your chunk embeddings.
-```bash
-```
-
 ## ChatBot
 Preparation: You need to have `chunks.parquet` and `embeddings.mmap` files from "Vectorize chunks" section.
 
@@ -115,7 +111,7 @@ Step 3: Upload chunks, choose collection name carefully because later it'll be u
 PYTHONPATH=. python3 qdrant/upload.py --collection-name chefrag
 ```
 
-Step 4: Open AnythingLLM UI at `localhost:3001` and create workspace called `ChefRAG`.
+Step 4: Open AnythingLLM UI at `localhost:3001` and create workspace called `chefrag`.
 **NOTE: it's important to have name of workspace same as collection in qdrant, because otherwise it won't find collection.**
 
 Step 5: Just chat with LLM.
