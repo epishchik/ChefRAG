@@ -26,12 +26,17 @@ PYTHONPATH=. python3 parser/recipes_texts.py
 ```
 
 ## Vectorize chunks
-Step 1: create chunks dataframe, for example, using `chunks/create_chunks.py` scripts.
+Step 1: clean parsed texts.
+```bash
+PYTHONPATH=. python3 chunks/clean_texts.py
+```
+
+Step 2: create chunks dataframe, for example, using `chunks/create_chunks.py` scripts.
 ```bash
 PYTHONPATH=. python3 chunks/create_chunks.py
 ```
 
-Step 2: vectorize chunks..
+Step 3: vectorize chunks.
 ```bash
 PYTHONPATH=. python3 chunks/vectorize_chunks.py
 ```
