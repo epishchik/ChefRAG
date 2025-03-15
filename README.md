@@ -120,3 +120,31 @@ Step 4: Open AnythingLLM UI at `localhost:3001` and create workspace called `che
 **NOTE: it's important to have name of workspace same as collection in qdrant, because otherwise it won't find collection.**
 
 Step 5: Just chat with LLM.
+
+## Benchmarking
+### Cosine similarity
+Define ground truth text and question, after that get answers from LLM / RAG-LLM. Calculate cosine similarity between ground truth and LLM, ground truth and RAG-LLM, compare values. It's expected that for RAG-LLM cosine similarity will be higher if your questions require knowledge from specific documents.
+
+Example dataset preparation shown in `notebooks/human_picked_dataset.ipynb`.
+
+Use this script to get LLM and RAG-LLM metric values using `BAAI/bge-multilingual-gemma2` embeddings.
+```bash
+PYTHONPATH=. python3 benchmark/ragllm_vs_llm.py --process-raw-df
+```
+
+#### Results
+Metrics presented in table were calculated using `hf.co/bartowski/Qwen2.5-3B-Instruct-GGUF:Q4_K_M` as ChatBot LLM and `bge-m3:567m-fp16` as embedder for retrieval. LLM temperature was set to 0.2 and maximum number of retrieved chunks was 4.
+
+We've tested 3 different chunking methods:
+1. Chunk is a full recipe (RAG_LLM_1).
+2. Chunk is either ingredient list or recipe steps (RAG_LLM_2).
+3. All kinds of chunks: title, description, ingredients, recipe parts (RAG_LLM_3).
+
+However, we always pass the same full recipe to the LLM context, different chunking strategies affect only the retrieval part.
+
+| Approach      | Cosine similarity |
+|:-------------:|:-----------------:|
+| LLM           |  0.1271           |
+| **RAG_LLM_1** |  **0.1821**       |
+| RAG_LLM_2     |  0.1480           |
+| RAG_LLM_3     |  0.1624           |

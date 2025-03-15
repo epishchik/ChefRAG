@@ -18,7 +18,10 @@ python-dotenv = "^1.0.1"
 datasets = "^3.3.1"
 openai = "^1.63.2"
 ollama = "^0.4.7"
-qdrant-client = "^1.13.2"
+qdrant-client = "1.11.2"
+torch = "2.5.1"
+numpy = "1.26.4"
+vllm = "^0.7.3"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.1.1"

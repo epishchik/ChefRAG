@@ -19,6 +19,7 @@ def parse_args() -> Namespace:
     parser.add_argument("--embedding-dim", type=int, default=1024)
     parser.add_argument("--chunks-file", type=str, default="data/chunks.parquet")
     parser.add_argument("--chunks-mmap", type=str, default="data/embeddings.mmap")
+    parser.add_argument("--store-on-disk", action="store_true")
 
     return parser.parse_args()
 
@@ -36,7 +37,9 @@ def main() -> None:
         client.create_collection(
             collection_name=args.collection_name,
             vectors_config=models.VectorParams(
-                size=args.embedding_dim, distance=models.Distance.COSINE
+                size=args.embedding_dim,
+                distance=models.Distance.COSINE,
+                on_disk=args.store_on_disk,
             ),
         )
 
